@@ -207,26 +207,6 @@
         }
       }
 
-      // New weighted randomizer based on inverse wins.
-      // Each participant's weight is calculated as: weight = Math.max(1, (maxWins - wins + 1))
-      // This ensures that participants with fewer wins get a higher chance.
-      function getWeightedRandomIndex() {
-        const maxWins = Math.max(...participants.map(p => p.wins));
-        let totalWeight = 0;
-        const weights = [];
-        participants.forEach((participant) => {
-          const weight = Math.max(1, (maxWins - participant.wins + 1));
-          weights.push(weight);
-          totalWeight += weight;
-        });
-        let random = Math.floor(Math.random() * totalWeight);
-        for (let i = 0; i < participants.length; i++) {
-          random -= weights[i];
-          if (random < 0) return i;
-        }
-        return participants.length - 1;
-      }
-
       // Load participants and nextParticipantId from local storage or create new ones.
       function loadParticipantsFromLocalStorage() {
         const saved = localStorage.getItem("raceSimulationParticipants");
@@ -329,9 +309,9 @@
           const bar = document.createElement("div");
           bar.className = "bar";
           // Dynamically set transition based on the current speed value.
-          bar.style.transition = `width ${(1000 / Number(
-            speedInput.value
-          ) - 60)}ms ease-in-out`;
+          bar.style.transition = `width ${
+            1000 / Number(speedInput.value) - 60
+          }ms ease-in-out`;
           bar.style.backgroundColor = participant.color;
           participantDiv.style.height = "100%";
 
@@ -405,10 +385,23 @@
         });
       }
 
-      // Run a round: randomly select a participant to win using the weighted randomizer.
+      let previousIndex = null;
+      let isMotivated = false;
+      function getRandomBoolean() {
+        const array = new Uint8Array(1);
+        crypto.getRandomValues(array);
+        return array[0] < 128; // 128 is half of 256
+      }
       function runRound() {
-        const randomIndex = getWeightedRandomIndex();
-        participants[randomIndex].wins++;
+        // Using a uniform random selection for 100% unbiased randomness.
+        const randomIndex = Math.floor(Math.random() * participants.length);
+        isMotivated = getRandomBoolean();
+        if (isMotivated) {
+          participants[previousIndex].wins++;
+        } else {
+          participants[randomIndex].wins++;
+          previousIndex = randomIndex;
+        }
         currentRound++;
         drawsInput.value = Number(drawsInput.value) - 1;
         updateRace();
