@@ -79,7 +79,6 @@
       #draws,
       #participantCount,
       #speed {
-        
         font-size: 1rem;
         font-weight: 700;
         height: 100%;
@@ -208,6 +207,26 @@
         }
       }
 
+      // New weighted randomizer based on inverse wins.
+      // Each participant's weight is calculated as: weight = Math.max(1, (maxWins - wins + 1))
+      // This ensures that participants with fewer wins get a higher chance.
+      function getWeightedRandomIndex() {
+        const maxWins = Math.max(...participants.map(p => p.wins));
+        let totalWeight = 0;
+        const weights = [];
+        participants.forEach((participant) => {
+          const weight = Math.max(1, (maxWins - participant.wins + 1));
+          weights.push(weight);
+          totalWeight += weight;
+        });
+        let random = Math.floor(Math.random() * totalWeight);
+        for (let i = 0; i < participants.length; i++) {
+          random -= weights[i];
+          if (random < 0) return i;
+        }
+        return participants.length - 1;
+      }
+
       // Load participants and nextParticipantId from local storage or create new ones.
       function loadParticipantsFromLocalStorage() {
         const saved = localStorage.getItem("raceSimulationParticipants");
@@ -262,7 +281,7 @@
         );
       }
 
-      // Update participants array based on participantCount input ensuring uniqueness
+      // Update participants array based on the participantCount input ensuring uniqueness
       function updateParticipantsFromCount(newCount) {
         const currentCount = participants.length;
         if (newCount > currentCount) {
@@ -312,7 +331,7 @@
           // Dynamically set transition based on the current speed value.
           bar.style.transition = `width ${(1000 / Number(
             speedInput.value
-          )-60)}ms ease-in-out`;
+          ) - 60)}ms ease-in-out`;
           bar.style.backgroundColor = participant.color;
           participantDiv.style.height = "100%";
 
@@ -379,16 +398,16 @@
             el.style.transition = "transform 0s";
             el.offsetHeight; // Force reflow.
             el.style.transition = `transform ${
-              (1000 / Number(speedInput.value)*1.1)
+              (1000 / Number(speedInput.value)) * 1.1
             }ms ease-in-out`;
             el.style.transform = "";
           }
         });
       }
 
-      // Run a round: randomly select a participant to win.
+      // Run a round: randomly select a participant to win using the weighted randomizer.
       function runRound() {
-        const randomIndex = getRandomIndex(participants);
+        const randomIndex = getWeightedRandomIndex();
         participants[randomIndex].wins++;
         currentRound++;
         drawsInput.value = Number(drawsInput.value) - 1;
